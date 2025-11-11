@@ -29,7 +29,10 @@ export class EmployeesController {
   @SkipThrottle({ default: false }) // allows rate limit for this requests
   @Get()
   findAll(@Ip() ip: string, @Query('role') role?: Role) {
-    this.logger.log(`Request for All Employees\t${ip}`, EmployeesController.name);
+    this.logger.log(
+      `Request for All Employees\t${ip}`,
+      EmployeesController.name,
+    );
     return this.employeesService.findAll(role);
   }
 
@@ -37,6 +40,11 @@ export class EmployeesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.employeesService.findOne(id);
+  }
+
+  @Get(':email')
+  findOneByEmail(@Param('email') email: string) {
+    return this.employeesService.findOne(email);
   }
 
   @Patch(':id')

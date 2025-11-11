@@ -30,6 +30,14 @@ export class EmployeesService {
     });
   }
 
+  async findOneByEmail(email: string) {
+    return this.databaseService.employees.findUnique({
+      where: {
+        email,
+      },
+    });
+  }
+
   async update(id: string, updateEmployeeDto: Prisma.EmployeesUpdateInput) {
     return this.databaseService.employees.update({
       where: {
