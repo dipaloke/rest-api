@@ -8,18 +8,69 @@ import {
   Delete,
   Query,
   Ip,
+  UseGuards,
+  Req,
+  NotFoundException,
 } from '@nestjs/common';
 import { EmployeesService } from './employees.service';
 
 import { Prisma, Role } from '@prisma/client';
 import { Throttle, SkipThrottle } from '@nestjs/throttler';
 import { MyLoggerService } from 'src/my-logger/my-logger.service';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Request } from 'express';
+import * as bcrypt from 'bcrypt';
+
+interface EmployeeProfile {
+  name: string;
+  email: string;
+  role: string;
+}
+interface AuthRequest extends Request {
+  user: { userId: string };
+}
 
 @SkipThrottle() // applies most of the methods.
 @Controller('employees')
 export class EmployeesController {
   constructor(private readonly employeesService: EmployeesService) {}
   private readonly logger = new MyLoggerService(EmployeesController.name);
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async getProfile(@Req() req: AuthRequest): Promise<EmployeeProfile> {
+    console.log(req);
+    const userId = req.user.userId;
+    const employee = await this.employeesService.findOne(userId);
+
+    if (!employee) {
+      throw new NotFoundException(`Employee with ID ${userId} not found`);
+    }
+
+    // return {
+    //   name: employee.name,
+    //   email: employee.email,
+    //   role: employee.role,
+    // };
+    return employee;
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('update')
+  async updateProfile(
+    @Req() req: AuthRequest,
+    @Body() body: { name: string; email: string; password?: string },
+  ) {
+    const userId = req.user.userId;
+    const updatedData: Prisma.EmployeesUpdateInput = {
+      name: body.name,
+      email: body.email,
+    };
+    if (body.password && body.password.trim() !== '') {
+      updatedData.password = await bcrypt.hash(body.password, 10);
+    }
+    return this.employeesService.update(userId, updatedData);
+  }
 
   @Post()
   create(@Body() createEmployeeDto: Prisma.EmployeesCreateInput) {
