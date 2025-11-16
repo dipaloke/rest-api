@@ -1,22 +1,43 @@
+# services:
+#   mongo:
+#     build:
+#       context: ./mongodb_rs
+#       args:
+#         MONGO_VERSION: 7
+#     environment:
+#       MONGO_REPLICA_PORT: 27017
+#       MONGO_REPLICA_HOST: localhost
+#     ports:
+#       - "27017:27017"
+#     volumes:
+#       - mongo-data:/data/db
+#     restart: unless-stopped
+#     healthcheck:
+#       test: ["CMD-SHELL", "echo \"try { rs.status() } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }\" | mongosh --quiet"]
+#       interval: 5s
+#       timeout: 30s
+#       retries: 30
+
+# volumes:
+#   mongo-data:
+
+
 services:
-  mongo:
+  # MongoDB v6+ (recommended)
+  mongo6:
     build:
       context: ./mongodb_rs
       args:
         MONGO_VERSION: 7
     environment:
-      MONGO_REPLICA_PORT: 27017
-      MONGO_REPLICA_HOST: localhost
+      MONGO_REPLICA_HOST: 127.0.0.1
+      MONGO_REPLICA_PORT: 27019
+      MONGO_COMMAND: 'mongosh'
     ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
+      - '27019:27019'
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "echo \"try { rs.status() } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }\" | mongosh --quiet"]
+      test: ['CMD', 'mongosh', 'admin', '--port', '27019', '--eval', "db.adminCommand('ping').ok"]
       interval: 5s
-      timeout: 30s
-      retries: 30
-
-volumes:
-  mongo-data:
+      timeout: 2s
+      retries: 20

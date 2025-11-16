@@ -1,13 +1,8 @@
-ARG MONGO_VERSION=7
+ARG MONGO_VERSION
 FROM mongo:${MONGO_VERSION}
 
-# Copy entrypoint script
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-
-# Environment defaults
-ENV MONGO_REPLICA_HOST=localhost \
-    MONGO_REPLICA_PORT=27017
-
-EXPOSE 27017
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Start mongod as a replica set (background), then initiate rs
+ENTRYPOINT mongod --port $MONGO_REPLICA_PORT --replSet rs0 --bind_ip 0.0.0.0 & MONGOD_PID=$!; \
+  INIT_REPL_CMD="rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: '$MONGO_REPLICA_HOST:$MONGO_REPLICA_PORT' }] })"; \
+  until ($MONGO_COMMAND admin --port $MONGO_REPLICA_PORT --eval "$INIT_REPL_CMD"); do sleep 1; done; \
+  echo "REPLICA SET ONLINE"; wait $MONGOD_PID;
