@@ -1,43 +1,51 @@
-# services:
-#   mongo:
-#     build:
-#       context: ./mongodb_rs
-#       args:
-#         MONGO_VERSION: 7
-#     environment:
-#       MONGO_REPLICA_PORT: 27017
-#       MONGO_REPLICA_HOST: localhost
-#     ports:
-#       - "27017:27017"
-#     volumes:
-#       - mongo-data:/data/db
-#     restart: unless-stopped
-#     healthcheck:
-#       test: ["CMD-SHELL", "echo \"try { rs.status() } catch (e) { rs.initiate({_id:'rs0',members:[{_id:0,host:'localhost:27017'}]}) }\" | mongosh --quiet"]
-#       interval: 5s
-#       timeout: 30s
-#       retries: 30
-
-# volumes:
-#   mongo-data:
-
-
 services:
-  # MongoDB v6+ (recommended)
-  mongo6:
+  mongo:
     build:
       context: ./mongodb_rs
       args:
         MONGO_VERSION: 7
+    container_name: rest-api-mongo
     environment:
-      MONGO_REPLICA_HOST: 127.0.0.1
-      MONGO_REPLICA_PORT: 27019
+      # IMPORTANT: advertise the member as the service name + port
+      MONGO_REPLICA_HOST: mongo
+      MONGO_REPLICA_PORT: 27017
       MONGO_COMMAND: 'mongosh'
+    command: [] # use Dockerfile ENTRYPOINT
     ports:
-      - '27019:27019'
+      - '27017:27017' # optional: for host tooling
+    volumes:
+      - mongo-data:/data/db # persist data
     restart: unless-stopped
     healthcheck:
-      test: ['CMD', 'mongosh', 'admin', '--port', '27019', '--eval', "db.adminCommand('ping').ok"]
+      test:
+        [
+          'CMD-SHELL',
+          'echo "db.adminCommand(''ping'').ok" | mongosh admin --port 27017 --quiet',
+        ]
       interval: 5s
       timeout: 2s
       retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rest-api-app
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      # Prisma requires RS for transactions -> keep replicaSet=rs0
+      # Use the service name "mongo" so container can resolve it.
+      DATABASE_URL: mongodb://mongo:27017/mydb?replicaSet=rs0
+
+      JWT_SECRET: "My_JWT_secret"
+      # NODE_ENV: development
+    ports:
+      - '3000:3000'
+    restart: unless-stopped
+    
+    # env_file: [ ./.env ]
+
+volumes:
+  mongo-data:

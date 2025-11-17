@@ -1,4 +1,4 @@
-ARG MONGO_VERSION
+ARG MONGO_VERSION=7
 FROM mongo:${MONGO_VERSION}
 
 # Start mongod as a replica set (background), then initiate rs
