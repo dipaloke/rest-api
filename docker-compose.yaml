@@ -14,7 +14,7 @@ services:
     ports:
       - '27017:27017' # optional: for host tooling
     volumes:
-      - mongo-data:/data/db # persist data
+      - restapi_mongo-data:/data/db # persist data
     restart: unless-stopped
     healthcheck:
       test:
@@ -41,11 +41,12 @@ services:
 
       JWT_SECRET: "My_JWT_secret"
       # NODE_ENV: development
+      PORT: 3000
     ports:
-      - '3000:3000'
+      - '8887:3000'
     restart: unless-stopped
-    
+
     # env_file: [ ./.env ]
 
 volumes:
-  mongo-data:
+  restapi_mongo-data:
